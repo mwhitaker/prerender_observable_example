@@ -1,0 +1,53 @@
+name: Prerender Observable with Dependency
+
+on:
+  # schedule:
+  #   - cron: "22 8 * * *"
+  #
+  # push:
+  workflow_dispatch:
+    inputs:
+      directory:
+        description: 'Where to save the directory'
+        required: true
+        default: 'output_bash'
+      script_file:
+        description: 'Script file location'
+        required: true
+        default: '.github/air-quality.sh'
+
+jobs:
+  prerender_observable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '14'
+      - name: Install cli tools
+        shell: bash
+        run: |
+          echo "Installing dependencies ..."
+          sudo apt install ffmpeg
+          npm install --global --production @alex.garcia/observable-prerender 1> /dev/null
+          echo "Dependencies installed successfully"
+      - run: npm install
+      - run: echo "OBS_OUTPUT_DIR=${{ github.event.inputs.directory }}" >> $GITHUB_ENV
+      - name: Screenshot Observable Prerender
+        shell: bash
+        run: |
+          echo directory ${{ github.event.inputs.directory }}
+          mkdir -p ${{ github.event.inputs.directory }}
+          # you could also run cli directly eg observable-prerender-animate
+          SCRIPT_FILEPATH=${SCRIPT_FILEPATH:="${{ github.event.inputs.script_file }}"}
+          chmod +x ${SCRIPT_FILEPATH}
+          $SCRIPT_FILEPATH
+          echo "Screenshot done"
+      - name: Commit and push if it changed
+        run: |-
+          git config user.name "Automated"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          timestamp=$(date -u)
+          git commit -m "Latest data: ${timestamp}" || exit 0
+          git push

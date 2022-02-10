@@ -1,0 +1,41 @@
+name: No Dependency Prerender Observable 
+
+on:
+  workflow_dispatch:
+    inputs:
+      directory:
+        description: 'Where to save the directory'
+        required: true
+        default: 'output_node'
+      script_file:
+        description: 'Script file location'
+        required: true
+        default: '.github/ca_maps.js'
+
+jobs:
+  prerender_observable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '14'
+      - run: npm install
+      - run: echo "OBS_OUTPUT_DIR=${{ github.event.inputs.directory }}" >> $GITHUB_ENV
+      - name: Screenshot Observable Prerender
+        shell: bash
+        run: |
+          echo directory ${{ github.event.inputs.directory }}
+          mkdir -p ${{ github.event.inputs.directory }}
+          SCRIPT_FILEPATH=${SCRIPT_FILEPATH:="${{ github.event.inputs.script_file }}"}
+          chmod +x ${SCRIPT_FILEPATH}
+          $SCRIPT_FILEPATH
+          echo "Screenshot done"
+      - name: Commit and push if it changed
+        run: |-
+          git config user.name "Automated"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          timestamp=$(date -u)
+          git commit -m "Latest data: ${timestamp}" || exit 0
+          git push
